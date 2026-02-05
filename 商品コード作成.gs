@@ -235,10 +235,12 @@ function メニュー_確定発行() {
   const sh = ss.getSheetByName(設定.マスターシート名);
   if (!sh) return;
 
-  const 最終行 = sh.getLastRow();
+  const 列マップ = 列番号を取得(sh);
+  
+  // ★データがある最終行を取得（空行を無視）
+  const 最終行 = データがある最終行を取得(sh, 列マップ);
   if (最終行 < 2) return;
 
-  const 列マップ = 列番号を取得(sh);
   const 言語マップ = 言語マップを取得(ss);
   const カテゴリマップ = カテゴリマップを取得(ss);
 
@@ -336,10 +338,12 @@ function メニュー_削除() {
   const sh = ss.getSheetByName(設定.マスターシート名);
   if (!sh) return;
 
-  const 最終行 = sh.getLastRow();
+  const 列マップ = 列番号を取得(sh);
+  
+  // ★データがある最終行を取得（空行を無視）
+  const 最終行 = データがある最終行を取得(sh, 列マップ);
   if (最終行 < 2) return;
 
-  const 列マップ = 列番号を取得(sh);
   const 全データ = sh.getRange(2, 1, 最終行 - 1, sh.getLastColumn()).getValues();
 
   const 削除行 = [];
@@ -373,10 +377,12 @@ function メニュー_一括更新() {
   const sh = ss.getSheetByName(設定.マスターシート名);
   if (!sh) return;
 
-  const 最終行 = sh.getLastRow();
+  const 列マップ = 列番号を取得(sh);
+  
+  // ★データがある最終行を取得（空行を無視）
+  const 最終行 = データがある最終行を取得(sh, 列マップ);
   if (最終行 < 2) { ui.alert('データがありません'); return; }
 
-  const 列マップ = 列番号を取得(sh);
   const 言語マップ = 言語マップを取得(ss);
   const カテゴリマップ = カテゴリマップを取得(ss);
 
@@ -652,6 +658,30 @@ function カテゴリマップを取得(ss) {
 function 正規化(v) { return String(v || '').replace(/\u3000/g, ' ').replace(/\s+/g, ' ').trim(); }
 function 数値変換(v) { const n = parseInt(String(v || '').trim(), 10); return Number.isFinite(n) ? n : null; }
 
+/**
+ * データがある最終行を取得（空行を無視）
+ * 指定列にデータがある最終行を返す
+ */
+function データがある最終行を取得(sh, 列マップ) {
+  // 日本語タイトル列を基準にする（必須項目なので）
+  const 基準列 = 列マップ[列名.日本語タイトル] || 1;
+  const 最大行 = sh.getLastRow();
+  
+  if (最大行 <= 1) return 1;
+  
+  // 基準列のデータを取得
+  const データ = sh.getRange(2, 基準列, 最大行 - 1, 1).getValues();
+  
+  // 下から上に向かってデータがある行を探す
+  for (let i = データ.length - 1; i >= 0; i--) {
+    if (データ[i][0] !== '' && データ[i][0] !== null && データ[i][0] !== undefined) {
+      return i + 2; // 2行目から始まるので+2
+    }
+  }
+  
+  return 1; // データなし
+}
+
 /* ============================
  * ④⑤⑥ マスター管理
  * ============================ */
@@ -696,7 +726,10 @@ function メニュー_プルダウン更新() {
   const sh = ss.getSheetByName(設定.マスターシート名);
   if (!sh) return;
   const 列マップ = 列番号を取得(sh);
-  const 最終行 = Math.max(sh.getLastRow(), 100);
+  
+  // ★データがある最終行 + 余裕を持たせる
+  const データ最終行 = データがある最終行を取得(sh, 列マップ);
+  const 最終行 = Math.max(データ最終行 + 100, 200); // 余裕を持たせる
 
   const 言語データ = 言語データを色付きで取得(ss);
   if (言語データ.values.length > 0 && 列マップ[列名.言語]) {
